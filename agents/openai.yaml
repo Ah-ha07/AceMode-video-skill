@@ -1,0 +1,4 @@
+interface:
+  display_name: "编辑部纪录短片"
+  short_description: "真实人物与发布会素材、描边抠图和封面式前三秒的编辑部纪录短片"
+  default_prompt: "Use $editorial-documentary-video to research a person or topic and render a sourced documentary with a cover-ready opening, named-person cutouts, and real event footage."

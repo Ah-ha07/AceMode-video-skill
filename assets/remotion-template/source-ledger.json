@@ -1,0 +1,40 @@
+{
+  "assets": [
+    {
+      "id": "placeholder-primary",
+      "localPath": "assets/placeholder-primary.svg",
+      "sourceUrl": "local://bundled-placeholder",
+      "license": "generated",
+      "attribution": "Bundled geometric placeholder",
+      "factualRole": "illustrative only",
+      "ingestStatus": "approved",
+      "publicationStatus": "cleared",
+      "usageScope": "bundled template and derivative project",
+      "replacementRequiredBeforePublish": false
+    },
+    {
+      "id": "placeholder-secondary",
+      "localPath": "assets/placeholder-secondary.svg",
+      "sourceUrl": "local://bundled-placeholder",
+      "license": "generated",
+      "attribution": "Bundled geometric placeholder",
+      "factualRole": "illustrative only",
+      "ingestStatus": "approved",
+      "publicationStatus": "cleared",
+      "usageScope": "bundled template and derivative project",
+      "replacementRequiredBeforePublish": false
+    },
+    {
+      "id": "placeholder-cutout",
+      "localPath": "assets/placeholder-cutout.svg",
+      "sourceUrl": "local://bundled-placeholder",
+      "license": "generated",
+      "attribution": "Bundled transparent person placeholder",
+      "factualRole": "illustrative only",
+      "ingestStatus": "approved",
+      "publicationStatus": "cleared",
+      "usageScope": "bundled template and derivative project",
+      "replacementRequiredBeforePublish": false
+    }
+  ]
+}

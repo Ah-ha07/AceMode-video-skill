@@ -1,0 +1,18 @@
+{
+  "name": "editorial-documentary-video",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx EditorialDocumentary renders/editorial-documentary.mp4 --codec h264 --crf 18",
+    "cover": "remotion still src/index.jsx EditorialDocumentary qa/cover-frame.png --frame 0",
+    "preview:opening": "remotion render src/index.jsx EditorialDocumentary qa/opening-preview.mp4 --frames 0-89 --codec h264 --crf 20",
+    "still": "remotion still src/index.jsx EditorialDocumentary qa/hero-frame.png --frame 215"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.440",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "remotion": "4.0.440"
+  }
+}
