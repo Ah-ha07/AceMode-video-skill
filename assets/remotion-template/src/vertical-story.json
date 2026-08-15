@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "aspectRatio": "9:16",
+  "transitionMode": "opaque-cut",
+  "targetDurationSeconds": 16,
+  "durationToleranceSeconds": 0.5,
+  "totalFrames": 480,
+  "audio": null,
+  "brand": {
+    "profile": "acemode",
+    "enabled": false,
+    "wordmark": "AceMode",
+    "logoAsset": null,
+    "communityLabel": "AI-native productivity community",
+    "promise": "10X faster, log off earlier",
+    "publisherBug": "ACE MODE / AI SIGNALS",
+    "requiresBrandReview": true,
+    "colors": {"navy": "#162D51", "midnight": "#0D1A2B", "cloud": "#F0F6FA", "signalCyan": "#2EE6D6"}
+  },
+  "palette": {"paper": "#F2EEE5", "ink": "#141414", "muted": "#6F726F", "red": "#E94443", "teal": "#2C9DA5", "yellow": "#E6B92B", "white": "#FFFDF7"},
+  "scenes": [
+    {
+      "id": "opening", "from": 0, "duration": 160, "emotion": "astonishment", "energy": 5, "motionBudget": "high", "readingWindowFrames": 42, "focalAnchor": "top-center",
+      "kicker": "CHAPTER 01 · THE WORKDAY", "headline": "Start with the work, not the model", "meta": "DIRECT EVIDENCE · SOURCE", "stat": "01", "statLabel": "REAL WORKFLOW", "caption": "Timed captions are supplied globally from captions.json", "primary": "assets/placeholder-primary.svg", "secondary": "assets/placeholder-secondary.svg", "primaryType": "image", "secondaryType": "image", "primaryStartFrom": 0, "primaryLabel": "WHAT CHANGES FOR YOU", "cutout": "assets/placeholder-cutout.svg", "cutoutSide": "right", "cutoutOutline": true, "cutoutOutlineColor": "teal", "subjectName": "A real worker or product", "subjectType": "person", "evidenceRole": "direct", "coverFrame": true, "openingMotion": "cover-impact", "accent": "teal", "layout": "cutout-portrait"
+    },
+    {
+      "id": "workflow", "from": 160, "duration": 160, "emotion": "clarity", "energy": 3, "motionBudget": "medium", "readingWindowFrames": 54, "focalAnchor": "center",
+      "kicker": "CHAPTER 02 · THE SHIFT", "headline": "Show the step AI removes", "meta": "BEFORE → AFTER", "stat": "10X", "statLabel": "WORKFLOW LEVER", "caption": "Timed captions are supplied globally from captions.json", "primary": "assets/placeholder-secondary.svg", "secondary": "assets/placeholder-primary.svg", "subjectName": "An AI workflow", "subjectType": "product", "evidenceRole": "direct", "accent": "red", "layout": "stat-right"
+    },
+    {
+      "id": "action", "from": 320, "duration": 160, "emotion": "agency", "energy": 2, "motionBudget": "low", "readingWindowFrames": 60, "focalAnchor": "center",
+      "kicker": "CHAPTER 03 · USE IT", "headline": "Say what people can do today", "meta": "USE NOW · TRY NOW · WATCH", "stat": "NOW", "statLabel": "NEXT ACTION", "caption": "Timed captions are supplied globally from captions.json", "primary": "assets/placeholder-primary.svg", "secondary": "assets/placeholder-secondary.svg", "brandRole": "close", "accent": "yellow", "layout": "poster"
+    }
+  ]
+}

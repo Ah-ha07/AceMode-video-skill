@@ -5,9 +5,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {spawnSync} from "node:child_process";
 
-const SPEAKER = "zh_male_dayi_saturn_bigtts";
-const VOICE_NAME = "大壹 2.0";
-const RESOURCE_ID = "seed-tts-2.0";
+const DEFAULT_SPEAKER = "zh_male_dayi_saturn_bigtts";
+const DEFAULT_VOICE_NAME = "大壹 2.0";
+const DEFAULT_RESOURCE_ID = "seed-tts-2.0";
+const DEFAULT_LANGUAGE = "zh-CN";
 const SUBMIT_URL = "https://openspeech.bytedance.com/api/v3/tts/submit";
 const QUERY_URL = "https://openspeech.bytedance.com/api/v3/tts/query";
 
@@ -29,6 +30,23 @@ const parseArgs = (argv) => {
 };
 
 const args = parseArgs(process.argv.slice(2));
+if (args.help || args.h) {
+  console.log(`Usage: node synthesize_volcano_dayi.mjs [options]
+
+Options:
+  --input PATH         Narration-only text (default: script.txt)
+  --output PATH        Final WAV/MP3 path (default: audio/voiceover.wav)
+  --manifest PATH      TTS manifest path (default: audio/tts-manifest.json)
+  --segment-dir PATH   Reusable paragraph segment directory
+  --speaker ID         Volcengine preset speaker ID (default: zh_male_dayi_saturn_bigtts)
+  --voice-name NAME    Human-readable voice name written to the manifest
+  --resource-id ID     Volcengine resource ID (default: seed-tts-2.0)
+  --language TAG       BCP-47 language tag written to the manifest (default: zh-CN)
+  --speed NUMBER       Volcengine speech rate multiplier, 0.5-2 (default: 1.08)
+  --post-speed NUMBER  Final atempo multiplier, 0.5-1.15 (default: 1)
+  --help               Show this help without requiring credentials`);
+  process.exit(0);
+}
 const inputPath = path.resolve(String(args.input ?? "script.txt"));
 const outputPath = path.resolve(
   String(args.output ?? "audio/voiceover.wav"),
@@ -39,6 +57,10 @@ const manifestPath = path.resolve(
 const segmentDir = path.resolve(
   String(args["segment-dir"] ?? path.join(path.dirname(outputPath), "segments")),
 );
+const speaker = String(args.speaker ?? DEFAULT_SPEAKER);
+const voiceName = String(args["voice-name"] ?? DEFAULT_VOICE_NAME);
+const resourceId = String(args["resource-id"] ?? DEFAULT_RESOURCE_ID);
+const language = String(args.language ?? DEFAULT_LANGUAGE);
 const speed = Number(args.speed ?? 1.08);
 const postSpeed = Number(args["post-speed"] ?? 1);
 
@@ -100,7 +122,7 @@ const headers = () => ({
   "Content-Type": "application/json",
   "X-Api-App-Id": appId,
   "X-Api-Access-Key": accessToken,
-  "X-Api-Resource-Id": RESOURCE_ID,
+  "X-Api-Resource-Id": resourceId,
   "X-Api-Request-Id": `editorial-tts-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
 });
 
@@ -143,7 +165,7 @@ const probeDuration = (filePath) => {
 
 const synthesizeParagraph = async (text, index) => {
   const number = String(index + 1).padStart(2, "0");
-  const textHash = hash(`${SPEAKER}|${speed}|${text}`);
+  const textHash = hash(`${speaker}|${resourceId}|${speed}|${text}`);
   const audioPath = path.join(segmentDir, `segment-${number}-${textHash}.mp3`);
   const metadataPath = path.join(
     segmentDir,
@@ -168,7 +190,7 @@ const synthesizeParagraph = async (text, index) => {
       user: {uid: "editorial-documentary-video"},
       req_params: {
         text,
-        speaker: SPEAKER,
+        speaker,
         audio_params: {
           format: "mp3",
           sample_rate: 24000,
@@ -231,9 +253,9 @@ const synthesizeParagraph = async (text, index) => {
     text,
     textHash,
     provider: "volcano",
-    model: RESOURCE_ID,
-    voiceName: VOICE_NAME,
-    voiceId: SPEAKER,
+    model: resourceId,
+    voiceName,
+    voiceId: speaker,
     speed,
     sentences: query.data.sentences ?? [],
     audioPath,
@@ -336,10 +358,10 @@ fs.writeFileSync(
     {
       provider: "volcano",
       api: "V3 async TTS",
-      model: RESOURCE_ID,
-      voiceName: VOICE_NAME,
-      voiceId: SPEAKER,
-      language: "zh-CN",
+      model: resourceId,
+      voiceName,
+      voiceId: speaker,
+      language,
       speed,
       postSpeed,
       outputPath,
@@ -348,6 +370,7 @@ fs.writeFileSync(
       truePeakCeilingDbtp: -1.5,
       masteringFilters,
       duration: finalDuration,
+      timingUnit: "seconds",
       segments: timedSegments,
       generatedAt: new Date().toISOString(),
     },

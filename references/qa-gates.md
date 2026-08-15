@@ -37,8 +37,8 @@
 - Cutout outline motion pulses or sweeps once and settles; it does not loop continuously.
 - Each scene has a stable reading window.
 - Scene energy and motion-budget fields form a deliberate curve with readable valleys, not an uninterrupted sequence of peaks.
-- Transition overlap is 12–20 frames unless intentionally justified.
-- Outgoing captions leave before incoming captions appear.
+- Default `opaque-cut` scenes are contiguous and each scene paints a fully opaque frame. Use overlap only when delivery spec explicitly chooses `designed-overlap` and the transition board proves the composite is intentional.
+- Captions render once at composition root from the TTS-timed manifest; scene boundaries cannot create a second caption layer.
 
 ## Typography
 
@@ -56,6 +56,7 @@
 - No unintended black frame, missing asset, silent narration gap, or frozen motion longer than the planned hold.
 - Every MP4 asset decodes independently, and all source clips are normalized to a predictable frame rate and pixel format before final rendering.
 - Contact sheet and transition midpoint frames have been reviewed.
+- Every scene boundary has before/cut/after frames in an explicitly reviewed transition manifest; no double headline, stale caption, transparent remnant, or one-frame black flash remains. Rendering the board alone leaves it `ready`, not `passed`.
 
 ## Approval package
 

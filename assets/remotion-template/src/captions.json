@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "language": "en-US",
+  "timing_source": "tts-manifest",
+  "source_voice_manifest_sha256": "replace-after-tts",
+  "cue_count": 3,
+  "cues": [
+    {"text": "Start with the work people already do.", "startMs": 0, "endMs": 5000, "timestampMs": null, "confidence": 1.0},
+    {"text": "Show exactly which step AI changes.", "startMs": 5200, "endMs": 10300, "timestampMs": null, "confidence": 1.0},
+    {"text": "Then say whether it is usable today.", "startMs": 10500, "endMs": 15800, "timestampMs": null, "confidence": 1.0}
+  ]
+}

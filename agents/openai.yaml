@@ -1,4 +1,4 @@
 interface:
-  display_name: "编辑部纪录短片"
-  short_description: "真实人物与发布会素材、描边抠图和封面式前三秒的编辑部纪录短片"
-  default_prompt: "Use $editorial-documentary-video to research a person or topic and render a sourced documentary with a cover-ready opening, named-person cutouts, and real event footage."
+  display_name: "AceMode 生产力编辑部"
+  short_description: "把 AI 热点翻译成可执行工作流、稿件与证据型视频"
+  default_prompt: "使用 $acemode-newsroom 查找今天最值得普通人关注的 AI 热点，先说它会改变哪项工作；分别确认稿件、声音、导演画面与审片后，生成带旁白同步字幕的原生画幅视频。"

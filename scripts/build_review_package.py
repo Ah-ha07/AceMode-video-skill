@@ -8,7 +8,15 @@ import json
 import math
 import shutil
 import subprocess
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows fallback
+    fcntl = None
+    import msvcrt
 
 
 PUBLISHABLE = {
@@ -25,17 +33,45 @@ def read_json(path: Path) -> dict:
         raise SystemExit(f"Cannot read JSON {path}: {exc}") from exc
 
 
-def run(command: list[str], cwd: Path) -> None:
-    subprocess.run(command, cwd=cwd, check=True)
+def run(command: list[str], cwd: Path, verbose: bool = False) -> None:
+    options = {"cwd": cwd, "check": False, "text": True, "capture_output": not verbose}
+    if Path(command[0]).name == "remotion":
+        with browser_lock(cwd):
+            completed = subprocess.run(command, **options)
+    else:
+        completed = subprocess.run(command, **options)
+    if completed.returncode != 0:
+        raise SystemExit(
+            f"Command failed ({completed.returncode}): {' '.join(command)}\n"
+            f"{completed.stdout or ''}{completed.stderr or ''}"
+        )
+
+
+@contextmanager
+def browser_lock(project: Path) -> Iterator[None]:
+    lock_path = project / "qa" / ".remotion-browser.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("w+b") as stream:
+        if fcntl is not None:
+            fcntl.flock(stream, fcntl.LOCK_EX)
+            yield
+            return
+        stream.write(b"0")
+        stream.flush()
+        stream.seek(0)
+        msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def remotion_command(project: Path) -> list[str]:
     local = project / "node_modules" / ".bin" / "remotion"
     if local.is_file():
         return [str(local)]
-    if shutil.which("npx"):
-        return ["npx", "remotion"]
-    raise SystemExit("Remotion CLI not found; install project dependencies first")
+    raise SystemExit("Local Remotion CLI not found; run npm ci in the video project first")
 
 
 def representative_frames(story: dict, maximum_scene_frames: int) -> list[int]:
@@ -92,6 +128,25 @@ def main() -> int:
     parser.add_argument("--max-scene-frames", type=int, default=10)
     parser.add_argument("--review-scale", type=float, default=0.5)
     parser.add_argument("--skip-opening-video", action="store_true")
+    parser.add_argument(
+        "--browser-executable",
+        help="Use an existing Chrome/Chromium executable instead of downloading one",
+    )
+    parser.add_argument(
+        "--chrome-mode",
+        choices=("headless-shell", "chrome-for-testing"),
+        help=(
+            "Remotion browser mode. Defaults to chrome-for-testing when "
+            "--browser-executable is provided"
+        ),
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=1,
+        help="Opening-preview render concurrency (default: 1)",
+    )
+    parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args()
 
     project = args.project.expanduser().resolve()
@@ -109,6 +164,8 @@ def main() -> int:
         raise SystemExit("--max-scene-frames must be at least 2")
     if not 0.1 <= args.review_scale <= 1:
         raise SystemExit("--review-scale must be between 0.1 and 1")
+    if args.concurrency < 1:
+        raise SystemExit("--concurrency must be at least 1")
 
     suffix = f"-{args.suffix.strip('-')}" if args.suffix.strip("-") else ""
     qa = project / "qa"
@@ -121,6 +178,17 @@ def main() -> int:
     board = qa / f"review-board{suffix}.png"
     manifest = qa / f"review-package{suffix}.json"
     remotion = remotion_command(project)
+    browser_args = (
+        ["--browser-executable", args.browser_executable]
+        if args.browser_executable
+        else []
+    )
+    chrome_mode = args.chrome_mode or (
+        "chrome-for-testing" if args.browser_executable else None
+    )
+    if chrome_mode:
+        browser_args += ["--chrome-mode", chrome_mode]
+    log_args = [] if args.verbose else ["--log=error"]
 
     run(
         remotion
@@ -131,8 +199,11 @@ def main() -> int:
             str(cover),
             "--frame",
             "0",
-        ],
+        ]
+        + browser_args
+        + log_args,
         project,
+        args.verbose,
     )
 
     opening_end = min(total - 1, max(0, int(round(fps * 3)) - 1))
@@ -152,8 +223,13 @@ def main() -> int:
                 "22",
                 "--scale",
                 str(args.review_scale),
-            ],
+                "--concurrency",
+                str(args.concurrency),
+            ]
+            + browser_args
+            + log_args,
             project,
+            args.verbose,
         )
 
     frames = representative_frames(story, args.max_scene_frames)
@@ -170,8 +246,11 @@ def main() -> int:
                 str(frame),
                 "--scale",
                 str(args.review_scale),
-            ],
+            ]
+            + browser_args
+            + log_args,
             project,
+            args.verbose,
         )
 
     ffmpeg = shutil.which("ffmpeg")
@@ -188,6 +267,8 @@ def main() -> int:
     run(
         [
             ffmpeg,
+            "-loglevel",
+            "error",
             "-y",
             "-framerate",
             "1",
@@ -204,6 +285,7 @@ def main() -> int:
             str(board),
         ],
         project,
+        args.verbose,
     )
 
     package = {

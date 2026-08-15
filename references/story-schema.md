@@ -1,5 +1,11 @@
 # Story and scene-plan schema
 
+## 目录
+
+- [`scene-plan.json`](#scene-planjson)
+- [`src/story.json`](#srcstoryjson)
+- [`source-ledger.json`](#source-ledgerjson)
+
 ## `scene-plan.json`
 
 Use this planning shape before touching Remotion code:
@@ -61,10 +67,27 @@ The bundled template consumes this render shape:
   "width": 1920,
   "height": 1080,
   "aspectRatio": "16:9",
+  "transitionMode": "opaque-cut",
   "targetDurationSeconds": 16,
   "durationToleranceSeconds": 0.5,
   "totalFrames": 480,
   "audio": "audio/voiceover.wav",
+  "brand": {
+    "profile": "acemode",
+    "enabled": false,
+    "wordmark": "AceMode",
+    "logoAsset": null,
+    "communityLabel": "AI 实践者效率社区",
+    "promise": "10X faster, log off earlier",
+    "publisherBug": "ACE MODE / AI SIGNALS",
+    "requiresBrandReview": true,
+    "colors": {
+      "navy": "#162D51",
+      "midnight": "#0D1A2B",
+      "cloud": "#F0F6FA",
+      "signalCyan": "#2EE6D6"
+    }
+  },
   "palette": {
     "paper": "#F2EEE5",
     "ink": "#141414",
@@ -112,15 +135,17 @@ The bundled template consumes this render shape:
 }
 ```
 
-For schema version 2, `aspectRatio`, `targetDurationSeconds`, and `durationToleranceSeconds` are required. The ratio must agree with `width` and `height`, and the timeline duration must stay within the declared tolerance. Use `16:9`, `9:16`, `1:1`, or `4:5`.
+For schema version 2, `aspectRatio`, `transitionMode`, `targetDurationSeconds`, and `durationToleranceSeconds` are required. The ratio must agree with `width` and `height`, and the timeline duration must stay within the declared tolerance. Use `16:9`, `9:16`, `1:1`, or `4:5`. Use `opaque-cut` by default; choose `designed-overlap` only when the delivery spec and transition review explicitly approve it.
 
 Every version-2 scene declares its emotional and motion intent. `energy` is an integer from 1 to 5; `motionBudget` is `low`, `medium`, or `high`; `readingWindowFrames` is the minimum stable reading interval; and `focalAnchor` describes the intended visual anchor. Read [emotion-motion-curve.md](emotion-motion-curve.md) before assigning these fields.
 
-Scene `from` values may overlap by 12–20 frames for transitions. The final scene end must equal `totalFrames`. Use paths relative to `public/`, never URLs.
+With `opaque-cut`, every scene begins exactly where the previous scene ends and each scene paints a fully opaque frame. `designed-overlap` may overlap only by an intentional, reviewed amount. The final scene end must equal `totalFrames`. Use paths relative to `public/`, never URLs.
 
 `primaryType` and `secondaryType` may be `image` or `video`; omit them for images. `cutout` is optional and must point to an RGBA PNG or transparent SVG derived from a ledgered source. Use `layout: cutout-portrait` when the cutout is the dominant identity device.
 
-The first render scene must start at frame 0 and set `coverFrame: true` plus `openingMotion: "cover-impact"`. All cover-critical media, identity, and headline layers are visible on frame 0; captions may enter after the cover frame. Use `primaryStartFrom` and `secondaryStartFrom` to begin an official clip on a meaningful internal frame. Use `primaryLabel` or `secondaryLabel` to identify official footage, archive material, contextual B-roll, or reconstruction.
+The first render scene must start at frame 0 and set `coverFrame: true` plus `openingMotion: "cover-impact"`. All cover-critical media, identity, and headline layers are visible on frame 0. Scene `caption` remains a short beat summary for planning/backward compatibility; spoken captions come only from the top-level TTS-timed `captions.json` manifest and render once above all scenes. Use `primaryStartFrom` and `secondaryStartFrom` to begin an official clip on a meaningful internal frame. Use `primaryLabel` or `secondaryLabel` to identify official footage, archive material, contextual B-roll, or reconstruction.
+
+Use the optional top-level `brand` block only for publisher identity. Keep `enabled: false` by default. When the user explicitly approves AceMode publishing identity, read [acemode-brand.md](acemode-brand.md), set `profile: "acemode"`, enable it, and use the official wordmark path in `logoAsset` when it exists. Keep `requiresBrandReview: true` while using a text fallback. Branding must not silently alter narration. Set `brandRole: "close"` on the final scene when it should carry the larger closing wordmark.
 
 Whenever narration names an editorially important person, product launch, keynote, paper, or event, set `subjectName`, `subjectType`, and `evidenceRole`. For `subjectType: "person"`, prefer a ledgered `cutout` plus contextual primary or secondary evidence. For `subjectType: "event"`, prefer a direct-evidence video; use a still or document fallback only when the ledger explains why.
 

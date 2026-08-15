@@ -2,6 +2,8 @@
 
 Read this reference when delivering 9:16, delivering more than one ratio, or adapting an existing edit to a new ratio.
 
+The bundled template includes `VerticalNewsroom` as a native 1080×1920 starting point. It is a geometry baseline, not permission to reuse horizontal crop decisions without a ratio-specific director review.
+
 ## Core contract
 
 Share the factual research, locked narration, word timings, source ledger, and original media. Direct the composition separately for each ratio.

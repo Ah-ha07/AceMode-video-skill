@@ -30,7 +30,7 @@ def main() -> int:
     (output / "qa").mkdir(exist_ok=True)
 
     if args.install:
-        subprocess.run(["npm", "install"], cwd=output, check=True)
+        subprocess.run(["npm", "ci"], cwd=output, check=True)
 
     print(output)
     return 0

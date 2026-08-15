@@ -71,7 +71,7 @@ Give every movement a communication job:
 - convert a number into meaning;
 - transfer attention into the next beat.
 
-Use a clear order such as hero → headline → proof → caption. During an energy peak, shorten the delay between stages; during a reflective beat, lengthen the hold rather than slowing every animation into mush.
+Use a clear visual order such as hero → headline → proof. Timed captions follow narration independently at composition root. During an energy peak, shorten the delay between visual stages; during a reflective beat, lengthen the hold rather than slowing every animation into mush.
 
 ## Shape the first three seconds
 

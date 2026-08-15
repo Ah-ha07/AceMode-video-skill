@@ -1,69 +1,47 @@
-# Editorial Documentary Video Skill
+# AceMode Newsroom
 
-一个面向 Codex / Agent 工作流的编辑型纪录片视频技能。它把事实研究、旁白锁定、词级时间轴、素材权利台账、镜头导演表、Remotion 动效和发布前 QA 串成一条可复现的生产流程。
+把最近 72 小时的 AI / 科技热点，转化为普通人能理解、能判断、能行动的生产力内容，并完成选题、稿件确认、声音试音、视觉导演、Remotion 审片和最终视频交付。
 
-适合 45 秒到 6 分钟的科技、商业、人物、历史、体育和新闻叙事。它不是通用幻灯片模板：旁白时间是唯一节拍源，画面必须承担证据、解释或情绪推进中的至少一种职责。
+AceMode 的核心不是播报模型名称和参数，而是回答：这条新闻会改变谁的哪项工作，原来怎么做，现在 AI 改变哪一步，人的责任还剩什么，以及它现在能用还是仍属于趋势。
 
-## 核心能力
+## 主要能力
 
-- 16:9、9:16 和多比例的原生导演，不做简单裁切转换
-- 封面即第 0 帧，前三秒完成封面到故事的转换和证据揭示
-- 锁定旁白后测量真实时长，并使用词级时间戳驱动中文字幕
-- 用 `scene-plan.json` 管理镜头任务、能量、布局、运动和素材对应关系
-- 用 `source-ledger.json` 分离本地剪辑许可与公开发布许可
-- 提供可复用的 Remotion 模板、项目脚手架、审片包和发布校验脚本
-- 在完整渲染前强制经过封面、三秒预览和关键帧板审阅
+- 冻结热点榜单与选题序号，跨轮次保留项目状态。
+- 从具体工作场景切入，生成带事实账本的 AceMode 英文或中文稿件。
+- 分别确认完整稿件、TTS 声音、Visual Director 方向与最终审片包。
+- 原生支持 16:9 `EditorialDocumentary` 与 9:16 `VerticalNewsroom`，不使用横版裁切冒充竖版。
+- 根据最终 TTS 时间戳生成全局旁白同步字幕。
+- 自动生成封面、前三秒预览、关键帧板和逐切点转场检查。
+- 区分内部审片版和公开发布版，保留素材权利与署名边界。
+- 记录 LLM token、TTS 用量和本地渲染时间；宿主没有真实 usage 时明确标记 unavailable。
 
 ## 安装
 
-将仓库克隆到 Codex 技能目录：
-
 ```bash
-git clone https://github.com/Ah-ha07/editorial-documentary-video-skill.git \
-  ~/.codex/skills/editorial-documentary-video
+git clone https://github.com/Ah-ha07/AceMode-video-skill.git \
+  ~/.codex/skills/acemode-newsroom
 ```
 
-重新打开 Codex 会话后，可通过技能名 `editorial-documentary-video` 使用。
-
-## 目录
+重新打开 Codex 或 Cursor 后，可以这样开始：
 
 ```text
-SKILL.md                         技能主规范
-agents/openai.yaml               Agent 元数据
-references/                      导演、版权、比例与 QA 参考规范
-scripts/scaffold_project.py      创建 Remotion 项目
-scripts/build_review_package.py  生成审片包
-scripts/validate_story.py        校验故事和发布权利
-scripts/synthesize_volcano_dayi.mjs  分段生成默认中文旁白
-assets/remotion-template/        数据驱动的 Remotion 模板
+使用 $acemode-newsroom 查找最近 72 小时最值得普通人关注的 AI 热点。
 ```
 
-## 最短工作流
+也可以直接说：
 
-1. 研究事实并锁定 `script.txt`。
-2. 生成或录制旁白，测量真实时长并获得词级时间戳。
-3. 完成 `scene-plan.json` 和 `source-ledger.json`。
-4. 创建项目并放入旁白和已登记素材。
-5. 运行故事校验，生成封面、三秒预览和关键帧审片板。
-6. 用户明确确认后才渲染完整视频，并执行最终媒体 QA。
+```text
+先列出今天会改变普通人工作流的 AI 新闻，我选好后再写稿和做视频。
+```
+
+## 运行环境
+
+热点阶段需要联网搜索。视频阶段需要 Python、Node.js、npm、FFmpeg、FFprobe、项目本地 Remotion CLI 和 Chrome/Chromium。默认火山引擎 TTS 需要相应账号、凭证与 voice ID 权限。
 
 ```bash
-python scripts/scaffold_project.py videos/my-story
-
-python scripts/validate_story.py \
-  videos/my-story/src/story.json \
-  videos/my-story/source-ledger.json
-
-python scripts/build_review_package.py videos/my-story
+python3 scripts/preflight.py --stage video --with-tts \
+  --video-project <video-project> \
+  --browser-executable <chrome-or-chromium>
 ```
 
-公开发布前还应运行严格权利校验：
-
-```bash
-python scripts/validate_story.py \
-  videos/my-story/src/story.json \
-  videos/my-story/source-ledger.json \
-  --publication
-```
-
-完整的质量规则、失败模式和交付契约以 [SKILL.md](SKILL.md) 为准。
+完整工作流、确认门和失败处理以 [SKILL.md](SKILL.md) 为准。

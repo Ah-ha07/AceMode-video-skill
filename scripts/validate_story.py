@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import wave
 from pathlib import Path
 from urllib.parse import urlparse
@@ -44,6 +45,7 @@ PUBLICATION_ALIASES = {
     "approved_for_editorial_citation": "legal_review_required",
 }
 PUBLISHABLE_STATUSES = {"cleared", "attribution_required"}
+TRANSITION_MODES = {"opaque-cut", "designed-overlap"}
 REQUIRED = {
     "id",
     "from",
@@ -60,6 +62,13 @@ REQUIRED = {
     "layout",
 }
 REQUIRED_V2 = {"emotion", "energy", "motionBudget", "readingWindowFrames", "focalAnchor"}
+
+
+def text_may_overflow(value: object, cjk_limit: int, latin_word_limit: int, latin_char_limit: int) -> bool:
+    text = str(value or "").strip()
+    if re.search(r"[\u3400-\u9fff]", text):
+        return len(text.replace(" ", "")) > cjk_limit
+    return len(text.split()) > latin_word_limit or len(text) > latin_char_limit
 
 
 def read_json(path: Path) -> dict:
@@ -89,6 +98,21 @@ def main() -> int:
     errors: list[str] = []
     warnings: list[str] = []
 
+    brand = story.get("brand")
+    if isinstance(brand, dict) and brand.get("enabled"):
+        if brand.get("profile") == "acemode":
+            if brand.get("wordmark") != "AceMode":
+                errors.append("AceMode brand wordmark must use exact capitalization: AceMode")
+            if not brand.get("logoAsset") and brand.get("requiresBrandReview") is not True:
+                errors.append("AceMode text-logo fallback must set requiresBrandReview: true")
+            if brand.get("promise") != "10X faster, log off earlier":
+                warnings.append("AceMode public promise differs from the LinkedIn reference")
+            if brand.get("communityLabel") not in {
+                "AI 实践者效率社区",
+                "AI-native productivity community",
+            }:
+                warnings.append("AceMode community label differs from the approved positioning")
+
     schema_version = story.get("schemaVersion", 1)
     if not isinstance(schema_version, int) or schema_version < 1:
         errors.append("schemaVersion must be a positive integer")
@@ -114,6 +138,9 @@ def main() -> int:
         errors.append("totalFrames must be a positive integer")
 
     aspect_ratio = story.get("aspectRatio")
+    transition_mode = story.get("transitionMode")
+    if schema_version >= 2 and transition_mode not in TRANSITION_MODES:
+        errors.append("version-2 story requires transitionMode: opaque-cut or designed-overlap")
     if schema_version >= 2 and aspect_ratio not in ASPECT_RATIOS:
         errors.append("version-2 story requires aspectRatio: 16:9, 9:16, 1:1, or 4:5")
     elif aspect_ratio in ASPECT_RATIOS and isinstance(width, int) and isinstance(height, int) and height > 0:
@@ -155,7 +182,7 @@ def main() -> int:
         errors.append("first scene must set coverFrame: true")
     elif scenes[0].get("openingMotion") != "cover-impact":
         errors.append("first scene must set openingMotion: 'cover-impact'")
-    elif len(str(scenes[0].get("headline", "")).replace(" ", "")) > 16:
+    elif text_may_overflow(scenes[0].get("headline"), 16, 9, 58):
         warnings.append("opening headline may be too long for a cover")
 
     ledger_items = ledger.get("assets", [])
@@ -195,7 +222,11 @@ def main() -> int:
             errors.append(f"{scene_id}: ends at {end}, beyond totalFrames {total}")
         if index > 0:
             overlap = previous_end - start
-            if overlap < -6:
+            if transition_mode == "opaque-cut" and overlap != 0:
+                errors.append(
+                    f"{scene_id}: opaque-cut requires a contiguous boundary; got overlap {overlap}"
+                )
+            elif overlap < -6:
                 errors.append(f"{scene_id}: timing gap is {-overlap} frames")
             elif overlap > 24:
                 warnings.append(f"{scene_id}: transition overlap is {overlap} frames")
@@ -250,9 +281,9 @@ def main() -> int:
                 scene.get("secondaryType", "image"),
             }:
                 warnings.append(f"{scene_id}: named event has no direct video; verify the fallback")
-        if len(str(scene["headline"]).replace(" ", "")) > 20:
+        if text_may_overflow(scene["headline"], 20, 11, 72):
             warnings.append(f"{scene_id}: headline may be too long")
-        if len(str(scene["caption"]).replace(" ", "")) > 28:
+        if text_may_overflow(scene["caption"], 28, 14, 84):
             warnings.append(f"{scene_id}: caption may overflow one line")
 
         asset_keys = ["primary", "secondary"]
@@ -423,6 +454,13 @@ def main() -> int:
                         warnings.append(message)
             except (wave.Error, ZeroDivisionError) as exc:
                 warnings.append(f"could not measure WAV duration for public/{audio}: {exc}")
+
+    if isinstance(brand, dict) and brand.get("enabled") and brand.get("logoAsset"):
+        logo_asset = str(brand["logoAsset"])
+        if urlparse(logo_asset).scheme:
+            errors.append("brand.logoAsset must be project-local, not a URL")
+        elif not (public / logo_asset).is_file():
+            errors.append(f"missing public/{logo_asset}")
 
     for message in warnings:
         print(f"WARN: {message}")

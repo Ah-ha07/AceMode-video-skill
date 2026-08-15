@@ -12,6 +12,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
+import {TimedCaptions} from './TimedCaptions';
 
 const clamp = {
   extrapolateLeft: 'clamp',
@@ -20,7 +21,7 @@ const clamp = {
 
 const fontFamily = 'PingFang SC, Hiragino Sans GB, Noto Sans CJK SC, Arial, sans-serif';
 
-const PaperBackground = ({palette}) => {
+const PaperBackground = ({palette, brand}) => {
   return (
     <AbsoluteFill
       style={{
@@ -59,7 +60,7 @@ const PaperBackground = ({palette}) => {
           color: `${palette.ink}60`,
         }}
       >
-        EDITORIAL MOTION STUDY · 01
+        {brand?.enabled ? brand.publisherBug : 'EDITORIAL MOTION STUDY · 01'}
       </div>
     </AbsoluteFill>
   );
@@ -276,47 +277,81 @@ const OpeningImpact = ({enabled, accent}) => {
   );
 };
 
-const Caption = ({text, palette, progress}) => {
+const BrandMark = ({brand, scene}) => {
+  if (!brand?.enabled) return null;
+
+  const isClose = scene.brandRole === 'close';
+  const navy = brand.colors?.navy ?? '#162D51';
+  const cloud = brand.colors?.cloud ?? '#F0F6FA';
+
   return (
     <div
       style={{
         position: 'absolute',
-        left: '50%',
-        bottom: 36,
-        transform: `translate(-50%, ${interpolate(progress, [0, 1], [18, 0])}px)`,
-        opacity: progress,
-        zIndex: 20,
-        padding: '11px 22px 12px',
-        color: palette.white,
-        background: 'rgba(16,16,16,.9)',
-        fontFamily,
-        fontSize: 28,
-        fontWeight: 650,
-        letterSpacing: .5,
-        lineHeight: 1.25,
-        whiteSpace: 'nowrap',
-        boxShadow: '0 6px 16px rgba(0,0,0,.12)',
+        right: isClose ? 72 : 58,
+        top: isClose ? 'auto' : 44,
+        bottom: isClose ? 110 : 'auto',
+        zIndex: 24,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: isClose ? 12 : 0,
       }}
     >
-      {text}
+      <div
+        style={{
+          minWidth: isClose ? 360 : 176,
+          height: isClose ? 112 : 52,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: isClose ? '0 34px' : '0 18px',
+          background: navy,
+        }}
+      >
+        {brand.logoAsset ? (
+          <Img
+            src={staticFile(brand.logoAsset)}
+            style={{width: '100%', height: '62%', objectFit: 'contain'}}
+          />
+        ) : (
+          <div
+            style={{
+              color: cloud,
+              fontFamily,
+              fontSize: isClose ? 56 : 26,
+              fontWeight: 900,
+              letterSpacing: isClose ? -2.5 : -1,
+            }}
+          >
+            {brand.wordmark ?? 'AceMode'}
+          </div>
+        )}
+      </div>
+      {isClose ? (
+        <div
+          style={{
+            color: navy,
+            fontFamily,
+            fontSize: 17,
+            fontWeight: 750,
+            letterSpacing: .3,
+          }}
+        >
+          {brand.communityLabel}
+        </div>
+      ) : null}
     </div>
   );
 };
 
-const Scene = ({scene, palette}) => {
+const Scene = ({scene, palette, brand}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const accent = palette[scene.accent];
   const coverMode = scene.coverFrame === true;
 
-  const sceneOpacity = coverMode
-    ? interpolate(frame, [scene.duration - 18, scene.duration], [1, 0], clamp)
-    : interpolate(
-        frame,
-        [0, 14, scene.duration - 18, scene.duration],
-        [0, 1, 1, 0],
-        clamp,
-      );
+  const sceneOpacity = 1;
   const primaryIn = spring({
     frame: frame - 2,
     fps,
@@ -335,21 +370,11 @@ const Scene = ({scene, palette}) => {
     config: {damping: 18, stiffness: 160, mass: .8},
     durationInFrames: 25,
   });
-  const captionIn = spring({
-    frame: frame - 34,
-    fps,
-    config: {damping: 200},
-    durationInFrames: 18,
-  });
-  const captionOut = interpolate(
-    frame,
-    [scene.duration - 30, scene.duration - 14],
-    [1, 0],
-    clamp,
-  );
-  const primaryProgress = coverMode ? 1 : primaryIn;
-  const textProgress = coverMode ? 1 : textIn;
-  const statProgress = coverMode ? 1 : statIn;
+  // Opaque cuts should never land on an empty paper frame. Keep the new beat's
+  // hierarchy readable at frame zero, then use motion only as a short settle.
+  const primaryProgress = coverMode ? 1 : interpolate(primaryIn, [0, 1], [.72, 1], clamp);
+  const textProgress = coverMode ? 1 : interpolate(textIn, [0, 1], [.76, 1], clamp);
+  const statProgress = coverMode ? 1 : interpolate(statIn, [0, 1], [.72, 1], clamp);
 
   const layouts = {
     'stat-left': {
@@ -423,6 +448,7 @@ const Scene = ({scene, palette}) => {
 
   return (
     <AbsoluteFill style={{opacity: sceneOpacity}}>
+      <PaperBackground palette={palette} brand={brand} />
       <div
         style={{
           position: 'absolute',
@@ -556,25 +582,26 @@ const Scene = ({scene, palette}) => {
           zIndex: 13,
         }}
       />
-      <Caption text={scene.caption} palette={palette} progress={captionIn * captionOut} />
+      <BrandMark brand={brand} scene={scene} />
     </AbsoluteFill>
   );
 };
 
-export const EditorialDocumentary = ({story}) => {
+export const EditorialDocumentary = ({story, captions}) => {
   return (
     <AbsoluteFill style={{background: story.palette.paper}}>
-      <PaperBackground palette={story.palette} />
-      {story.scenes.map((scene) => (
+      {story.scenes.map((scene, index) => (
         <Sequence
           key={scene.id}
           from={scene.from}
           durationInFrames={scene.duration}
           premountFor={30}
+          style={{zIndex: index + 1}}
         >
-          <Scene scene={scene} palette={story.palette} />
+          <Scene scene={scene} palette={story.palette} brand={story.brand} />
         </Sequence>
       ))}
+      <TimedCaptions manifest={captions} />
       {story.audio ? <Audio src={staticFile(story.audio)} /> : null}
     </AbsoluteFill>
   );

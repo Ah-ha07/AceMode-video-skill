@@ -1,0 +1,24 @@
+{
+  "id": "acemode",
+  "name": "AceMode",
+  "category": {
+    "en": "AI-native productivity community",
+    "zh": "AI 实践者效率社区"
+  },
+  "promise": "10X faster, log off earlier",
+  "editorialSignoff": "Stay sharp. Stay ahead.",
+  "logo": {
+    "type": "wordmark",
+    "text": "AceMode",
+    "officialAsset": null,
+    "fallbackRequiresReview": true,
+    "disallowInventedMonogram": true
+  },
+  "colors": {
+    "navy": "#162D51",
+    "midnight": "#0D1A2B",
+    "cloud": "#F0F6FA",
+    "signalCyan": "#2EE6D6",
+    "ink": "#090B12"
+  }
+}

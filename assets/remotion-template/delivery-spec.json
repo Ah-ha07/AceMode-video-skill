@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "story_id": "replace-with-newsroom-story-id",
+  "language": "en-US",
+  "target_duration_seconds": 16,
+  "delivery_scope": "internal",
+  "transition_mode": "opaque-cut",
+  "profiles": [
+    {"id": "vertical", "aspect_ratio": "9:16", "width": 1080, "height": 1920, "composition": "VerticalNewsroom"}
+  ],
+  "voice": {
+    "provider": "volcano",
+    "voice_id": "replace-after-audition",
+    "approval_basis": "audition",
+    "approval_receipt": "replace-with-user-confirmation-receipt"
+  },
+  "captions": {"required": true, "language": "en-US", "timing_source": "tts-manifest", "max_lines": 2},
+  "brand": {"enabled": false, "profile": null, "approval_receipt": null},
+  "director_approval_receipt": "replace-with-director-visual-confirmation-receipt"
+}

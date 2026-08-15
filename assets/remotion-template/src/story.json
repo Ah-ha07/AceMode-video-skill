@@ -4,10 +4,27 @@
   "width": 1920,
   "height": 1080,
   "aspectRatio": "16:9",
+  "transitionMode": "opaque-cut",
   "targetDurationSeconds": 16,
   "durationToleranceSeconds": 0.5,
   "totalFrames": 480,
   "audio": null,
+  "brand": {
+    "profile": "acemode",
+    "enabled": false,
+    "wordmark": "AceMode",
+    "logoAsset": null,
+    "communityLabel": "AI 实践者效率社区",
+    "promise": "10X faster, log off earlier",
+    "publisherBug": "ACE MODE / AI SIGNALS",
+    "requiresBrandReview": true,
+    "colors": {
+      "navy": "#162D51",
+      "midnight": "#0D1A2B",
+      "cloud": "#F0F6FA",
+      "signalCyan": "#2EE6D6"
+    }
+  },
   "palette": {
     "paper": "#F2EEE5",
     "ink": "#141414",
@@ -21,7 +38,7 @@
     {
       "id": "opening",
       "from": 0,
-      "duration": 170,
+      "duration": 160,
       "emotion": "astonishment",
       "energy": 5,
       "motionBudget": "high",
@@ -53,8 +70,8 @@
     },
     {
       "id": "context",
-      "from": 150,
-      "duration": 180,
+      "from": 160,
+      "duration": 160,
       "emotion": "curiosity",
       "energy": 3,
       "motionBudget": "medium",
@@ -76,8 +93,8 @@
     },
     {
       "id": "meaning",
-      "from": 310,
-      "duration": 170,
+      "from": 320,
+      "duration": 160,
       "emotion": "reflection",
       "energy": 1,
       "motionBudget": "low",
@@ -91,6 +108,7 @@
       "caption": "这里放最后一句能够留下余味的字幕",
       "primary": "assets/placeholder-primary.svg",
       "secondary": "assets/placeholder-secondary.svg",
+      "brandRole": "close",
       "accent": "yellow",
       "layout": "poster"
     }

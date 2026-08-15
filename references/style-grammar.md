@@ -36,7 +36,7 @@ Do not use the same layout more than twice consecutively. Do not alternate layou
 - Headline: 48–72 px at 1920×1080, 1–3 short lines.
 - Kicker label: 14–20 px, solid accent block.
 - Stat: 90–150 px, outside faces and action.
-- Caption: 26–34 px, bottom-center black strip, one clause.
+- Timed caption: 26–34 px for 16:9 or about 42–52 px for 1080×1920, in a dedicated bottom band, at most two mobile lines.
 - Secondary media: 14–24% of frame, white border, ±0.5–2° rotation.
 - Keep all critical content at least 70 px from frame edges; captions at least 34 px from the bottom.
 
@@ -49,8 +49,8 @@ Do not use the same layout more than twice consecutively. Do not alternate layou
 - Person cutout: enter after the year field and before the supporting evidence card; use a 24–34 frame spring plus at most 1% idle drift.
 - Person cutout identity cue: render a 4–10 px accent keyline from the alpha layer behind the subject, animate one brief outline pulse or directional sweep, then reduce it to a restrained static edge. Keep the face and hair readable; do not use a permanent neon glow.
 - Video card: start on a meaningful internal frame, then hold or use a restrained 2–4% push; do not loop visibly inside a short beat.
-- Caption: 10–16 frame vertical reveal; exit before the scene transition.
-- Scene transition: 12–20 frame crossfade or directional mask. Use wipes only when movement or chronology motivates them.
+- Timed caption: render once at composition root from the TTS manifest; use a short cue fade independent of scene transitions.
+- Scene transition: default to a contiguous opaque cut. Use crossfade or directional mask only under `designed-overlap`, and inspect before/cut/after frames. Use wipes only when movement or chronology motivates them.
 - Never animate every element at once. A reliable order is media → headline → stat → evidence inset → caption.
 
 ## Cover-to-story opening
