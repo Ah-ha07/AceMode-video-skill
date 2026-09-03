@@ -71,6 +71,10 @@ def split_display_words(text: str, max_words: int, max_chars: int) -> list[list[
             current = candidate
     if current:
         chunks.append(current)
+    # Avoid a one-word orphan at the end of a sentence. Besides reading poorly,
+    # provider timing can make that final cue too brief for mobile captions.
+    if len(chunks) >= 2 and len(chunks[-1]) == 1 and len(chunks[-2]) >= 3:
+        chunks[-1].insert(0, chunks[-2].pop())
     return chunks
 
 
@@ -90,7 +94,8 @@ def raw_word_times(words: list[Any], unit: str) -> list[tuple[int, int]]:
 def generate_cues(manifest: dict[str, Any], max_words: int, max_chars: int) -> list[dict[str, Any]]:
     cues: list[dict[str, Any]] = []
     for sentence in sentence_records(manifest):
-        chunks = split_display_words(sentence["text"], max_words, max_chars)
+        display_text = re.sub(r"\bten\s+x\b", "10X", sentence["text"], flags=re.IGNORECASE)
+        chunks = split_display_words(display_text, max_words, max_chars)
         display_count = sum(len(chunk) for chunk in chunks)
         raw = raw_word_times(sentence["words"], sentence["unit"])
         consumed = 0
@@ -99,8 +104,14 @@ def generate_cues(manifest: dict[str, Any], max_words: int, max_chars: int) -> l
             consumed += len(chunk)
             end_ratio = consumed / max(display_count, 1)
             if raw:
+                # Display tokens and provider word tokens are not always 1:1.
+                # Examples include "AI" -> "a" + "i" and hyphenated numbers.
+                # Partition the provider tokens with shared, monotonic boundaries
+                # so adjacent caption chunks can never reuse the same word.
                 start_index = min(len(raw) - 1, int(start_ratio * len(raw)))
-                end_index = min(len(raw) - 1, max(start_index, int(end_ratio * len(raw) - 1e-9)))
+                end_exclusive = len(raw) if index == len(chunks) - 1 else int(end_ratio * len(raw))
+                end_exclusive = min(len(raw), max(start_index + 1, end_exclusive))
+                end_index = end_exclusive - 1
                 start_ms = raw[start_index][0]
                 end_ms = raw[end_index][1]
             else:

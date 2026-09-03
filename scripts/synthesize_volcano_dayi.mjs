@@ -139,6 +139,11 @@ const fetchWithRetry = async (url, options, attempts = 3) => {
   throw lastError;
 };
 
+// Keep the written AceMode mark as "10X", but make the speech engine say
+// "ten X" instead of spelling it as "one-oh-X".
+const applyPronunciationAliases = (text) =>
+  text.replace(/\b10X\b/gi, "ten X");
+
 const probeDuration = (filePath) => {
   const result = spawnSync(
     "ffprobe",
@@ -165,7 +170,8 @@ const probeDuration = (filePath) => {
 
 const synthesizeParagraph = async (text, index) => {
   const number = String(index + 1).padStart(2, "0");
-  const textHash = hash(`${speaker}|${resourceId}|${speed}|${text}`);
+  const spokenText = applyPronunciationAliases(text);
+  const textHash = hash(`${speaker}|${resourceId}|${speed}|${spokenText}`);
   const audioPath = path.join(segmentDir, `segment-${number}-${textHash}.mp3`);
   const metadataPath = path.join(
     segmentDir,
@@ -189,7 +195,7 @@ const synthesizeParagraph = async (text, index) => {
     body: JSON.stringify({
       user: {uid: "editorial-documentary-video"},
       req_params: {
-        text,
+        text: spokenText,
         speaker,
         audio_params: {
           format: "mp3",
@@ -251,6 +257,7 @@ const synthesizeParagraph = async (text, index) => {
   const metadata = {
     index,
     text,
+    spokenText,
     textHash,
     provider: "volcano",
     model: resourceId,

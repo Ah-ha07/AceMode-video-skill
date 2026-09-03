@@ -128,7 +128,7 @@ python3 <skill-dir>/scripts/newsroom_state.py approve-script \
 
 ## 第四站：制作视频审片包
 
-读取 [video-handoff.md](references/video-handoff.md)、[delivery-contract.md](references/delivery-contract.md)、[caption-contract.md](references/caption-contract.md)、[visual-director.md](references/visual-director.md)、[runtime-prerequisites.md](references/runtime-prerequisites.md) 和 [source-recheck-contract.md](references/source-recheck-contract.md)，并按其中路由读取视频参考。先做运行环境预检，再逐项重新核对事实账本里所有要求生产前复查的来源，保存结构化 `source-recheck.json`：
+读取 [video-handoff.md](references/video-handoff.md)、[delivery-contract.md](references/delivery-contract.md)、[caption-contract.md](references/caption-contract.md)、[visual-director.md](references/visual-director.md)、[layout-review.md](references/layout-review.md)、[runtime-prerequisites.md](references/runtime-prerequisites.md) 和 [source-recheck-contract.md](references/source-recheck-contract.md)，并按其中路由读取视频参考。先做运行环境预检，再逐项重新核对事实账本里所有要求生产前复查的来源，保存结构化 `source-recheck.json`：
 
 ```bash
 python3 <skill-dir>/scripts/newsroom_state.py recheck \
@@ -146,12 +146,14 @@ python3 <skill-dir>/scripts/newsroom_state.py recheck \
 
 声音先做短样试音并保存 `voice-audition.json`，用户确认候选后才能生成全稿；不可静默换声。TTS manifest 是字幕时间唯一来源，运行 `caption_pipeline.py generate` 生成逐句/短语 cue，并确保 Remotion 使用全局 timed captions，而不是 scene 内手填一句字幕。frame 0 是封面，1.5 秒内出现与工作任务相关的真实证据，3 秒内落下第一个实际回报。
 
-先做封面帧、带声音的前三秒预览和代表性关键帧板，不渲染整片。验证 story 后生成审片包，再运行 `build_transition_review.py`，逐个切点渲染切前、切点、切后三帧；实际看完转场板后再用该脚本登记 reviewed receipt，生成图片本身不算通过。最后用 `mark-preview` 显式登记 delivery spec、字幕、声音确认、导演包、已审阅转场检查、所有关键输入、素材和预览文件；完整命令见 [video-handoff.md](references/video-handoff.md)。
+scene 实现完成后，先运行 `build_layout_review.py`：每个 scene 生成早段、中点和晚段原生尺寸截图，含二次揭示的 scene 还要在 `layoutCheckFrames` 登记额外帧；证据截图用 `layoutRequiredLandmarks` 声明来源、标题/关键数字和日期等必见区域。必须打开原生 PNG 逐张检查语义对应、设备可读性、证据裁切和字幕安全区，确认后登记 reviewed receipt；只看缩略总览板不算通过。
+
+布局通过后再做封面帧、带声音的前三秒预览和代表性关键帧板，不渲染整片。验证 story 后生成审片包，再运行 `build_transition_review.py`，逐个切点渲染切前、切点、切后三帧；实际看完转场板后再用该脚本登记 reviewed receipt，生成图片本身不算通过。最后用 `mark-preview` 显式登记 delivery spec、字幕、声音确认、导演包、已审阅布局检查、已审阅转场检查、所有关键输入、素材和预览文件；完整命令见 [video-handoff.md](references/video-handoff.md)。
 
 然后在对话里展示：
 
 - 实测口播时长、目标和误差；
-- 每个画幅的封面、前三秒预览和 review board；
+- 每个画幅的封面、前三秒预览、layout board 和 review board；
 - 事实/版权边界、署名要求和 publication blockers；
 - scene plan 与 review package 的路径。
 

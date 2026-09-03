@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from build_layout_review import validate_layout_manifest
 from build_transition_review import validate_transition_manifest
 from caption_pipeline import validate_manifest as validate_caption_manifest
 from validate_delivery_spec import validate_contract
@@ -799,13 +800,15 @@ def validate_preview_inputs(args: argparse.Namespace, story_id: str) -> None:
         "covers": len(args.covers),
         "opening previews": len(args.openings),
         "review boards": len(args.boards),
+        "layout reviews": len(args.layout_reviews),
+        "layout boards": len(args.layout_boards),
         "transition reviews": len(args.transition_reviews),
         "transition boards": len(args.transition_boards),
     }
     if len(set(counts.values())) != 1:
         raise SystemExit(
             "Each delivery profile requires one story, review manifest, cover, opening, "
-            "review board, transition review, and transition board: " + json.dumps(counts)
+            "review board, layout review/board, transition review, and transition board: " + json.dumps(counts)
         )
 
     stories = [read_json(path.expanduser().resolve()) for path in args.story_files]
@@ -849,6 +852,27 @@ def validate_preview_inputs(args: argparse.Namespace, story_id: str) -> None:
     if set(review_ratios) != set(story_ratios):
         raise SystemExit("Review manifest ratios do not match render story ratios")
 
+    passed_layout_boards = {path.expanduser().resolve() for path in args.layout_boards}
+    for index, (path, layout, story_value) in enumerate(zip(
+        args.layout_reviews,
+        [read_json(item.expanduser().resolve()) for item in args.layout_reviews],
+        stories,
+    )):
+        video_root = path.expanduser().resolve().parent.parent
+        errors = validate_layout_manifest(layout, story_value, video_root)
+        if errors:
+            raise SystemExit(f"Invalid layout review {path}: " + "; ".join(errors))
+        story_path = args.story_files[index].expanduser().resolve()
+        if layout.get("story_sha256") != sha256(story_path):
+            raise SystemExit(f"Layout review does not match render story: {path}")
+        if layout.get("composition") != reviews[index].get("composition"):
+            raise SystemExit(f"Layout review composition does not match review package: {path}")
+        if layout.get("aspect_ratio") != story_value.get("aspectRatio"):
+            raise SystemExit(f"Layout review aspect ratio does not match render story: {path}")
+        board = (video_root / str(layout["board"])).resolve()
+        if board not in passed_layout_boards:
+            raise SystemExit(f"Layout review board was not registered: {board}")
+
     passed_transition_boards = {path.expanduser().resolve() for path in args.transition_boards}
     transition_ratios: list[str] = []
     for index, (path, transition, story_value) in enumerate(zip(
@@ -873,6 +897,10 @@ def validate_preview_inputs(args: argparse.Namespace, story_id: str) -> None:
         resolved = path.expanduser().resolve()
         if not is_image(resolved):
             raise SystemExit(f"Not a recognized image artifact: {resolved}")
+    for path in args.layout_boards:
+        resolved = path.expanduser().resolve()
+        if not is_image(resolved):
+            raise SystemExit(f"Not a recognized layout board: {resolved}")
     for path in args.transition_boards:
         resolved = path.expanduser().resolve()
         if not is_image(resolved):
@@ -934,6 +962,8 @@ def command_mark_preview(args: argparse.Namespace) -> None:
         ("director-frame", args.director_frames),
         ("source-recheck", [root / str(story["source_recheck"]["manifest_path"])]),
         ("review-manifest", args.review_manifests),
+        ("layout-review", args.layout_reviews),
+        ("layout-board", args.layout_boards),
         ("transition-review", args.transition_reviews),
         ("transition-board", args.transition_boards),
         ("render-story", args.story_files),
@@ -1318,6 +1348,20 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument("--cover", dest="covers", action="append", type=Path, required=True)
     command.add_argument("--opening", dest="openings", action="append", type=Path, required=True)
     command.add_argument("--board", dest="boards", action="append", type=Path, required=True)
+    command.add_argument(
+        "--layout-review",
+        dest="layout_reviews",
+        action="append",
+        type=Path,
+        required=True,
+    )
+    command.add_argument(
+        "--layout-board",
+        dest="layout_boards",
+        action="append",
+        type=Path,
+        required=True,
+    )
     command.add_argument(
         "--transition-review",
         dest="transition_reviews",

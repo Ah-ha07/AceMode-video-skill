@@ -16,6 +16,7 @@ VALIDATOR = ROOT / "scripts" / "validate_script_package.py"
 CAPTIONS = ROOT / "scripts" / "caption_pipeline.py"
 STORY_VALIDATOR = ROOT / "scripts" / "validate_story.py"
 TRANSITIONS = ROOT / "scripts" / "build_transition_review.py"
+LAYOUT = ROOT / "scripts" / "build_layout_review.py"
 CLOSING = "这里是 AceMode，帮你把新工具变成真正能用的生产力。"
 
 
@@ -26,6 +27,14 @@ def write_json(path: Path, value: dict) -> None:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def tree_sha256(path: Path) -> str:
+    records = [
+        f"{item.relative_to(path).as_posix()}:{sha256(item)}"
+        for item in sorted(value for value in path.rglob("*") if value.is_file())
+    ]
+    return hashlib.sha256("\n".join(records).encode("utf-8")).hexdigest()
 
 
 def signal() -> dict:
@@ -316,6 +325,45 @@ def preview_arguments(story: Path) -> list[str]:
     director_frames = [video / "director" / f"style-frame-{index}.png" for index in range(1, 4)]
     for path in [director_board, *director_frames]:
         path.write_bytes(png)
+    layout_board = video / "qa" / "layout-board.png"
+    layout_board.write_bytes(png)
+    layout_frames = []
+    for index, frame in enumerate((12, 15, 29)):
+        path = video / "qa" / "layout-frames" / f"{index:02d}-scene-1-f{frame:04d}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(png)
+        layout_frames.append(
+            {
+                "scene_id": "scene-1",
+                "frame": frame,
+                "reason": ("early-settled", "midpoint", "late-settled")[index],
+                "path": str(path.relative_to(video)),
+                "sha256": sha256(path),
+                "required_landmarks": [],
+            }
+        )
+    layout_review = video / "qa" / "layout-review.json"
+    write_json(
+        layout_review,
+        {
+            "schema_version": 1,
+            "status": "passed",
+            "composition": "EditorialDocumentary",
+            "story": "src/story.json",
+            "story_sha256": sha256(story_file),
+            "source_tree": "src",
+            "source_tree_sha256": tree_sha256(video / "src"),
+            "aspect_ratio": "16:9",
+            "native_frame_resolution": {"width": 320, "height": 180},
+            "frames": layout_frames,
+            "board": "qa/layout-board.png",
+            "board_sha256": sha256(layout_board),
+            "required_checks": ["readability"],
+            "reviewer": "test",
+            "reviewed_at": "2026-08-12T10:05:20Z",
+            "review_receipt": "layout-approved",
+        },
+    )
     transition_board = video / "qa" / "transition-board.png"
     transition_board.write_bytes(png)
     transition_review = video / "qa" / "transition-review.json"
@@ -346,6 +394,8 @@ def preview_arguments(story: Path) -> list[str]:
         "--director-board", str(director_board),
         *[item for path in director_frames for item in ("--director-frame", str(path))],
         "--review-manifest", str(review),
+        "--layout-review", str(layout_review),
+        "--layout-board", str(layout_board),
         "--transition-review", str(transition_review),
         "--transition-board", str(transition_board),
         "--story-file", str(story_file),
@@ -719,6 +769,22 @@ class NewsroomWorkflowTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("explicitly approved", result.stderr)
 
+    def test_unreviewed_layout_board_blocks_preview(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            project, story = self.set_up_selected_story(Path(temp_name))
+            self.register(project, story)
+            self.approve_script(project)
+            self.recheck(project, story, "unchanged")
+            args = preview_arguments(story)
+            manifest_path = story / "video" / "qa" / "layout-review.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["status"] = "ready"
+            manifest.pop("review_receipt")
+            write_json(manifest_path, manifest)
+            result = self.run_state("mark-preview", str(project), "1", *args, check=False)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("explicitly approved", result.stderr)
+
     def test_status_reports_integrity_failure(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             project, story = self.set_up_selected_story(Path(temp_name))
@@ -743,6 +809,10 @@ class NewsroomWorkflowTests(unittest.TestCase):
                 "import ratio from './ratio-config.json';\nexport const Fixture = () => ratio;\n",
                 encoding="utf-8",
             )
+            layout_path = story / "video" / "qa" / "layout-review.json"
+            layout = json.loads(layout_path.read_text(encoding="utf-8"))
+            layout["source_tree_sha256"] = tree_sha256(src)
+            write_json(layout_path, layout)
             self.run_state("mark-preview", str(project), "1", *preview_args)
             self.run_state(
                 "present-preview", str(project), "1", "--receipt", "test-turn"
@@ -910,6 +980,47 @@ class NewsroomWorkflowTests(unittest.TestCase):
 
 
 class ProductionContractTests(unittest.TestCase):
+    def test_layout_review_requires_explicit_review_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_name:
+            temp = Path(temp_name)
+            project = temp / "video"
+            frame_dir = project / "qa" / "layout-frames"
+            frame_dir.mkdir(parents=True)
+            png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
+            frames = []
+            for index, frame in enumerate((12, 15, 29)):
+                path = frame_dir / f"{index:02d}-scene-1-f{frame:04d}.png"
+                path.write_bytes(png)
+                frames.append({"scene_id": "scene-1", "frame": frame, "path": str(path.relative_to(project)), "sha256": sha256(path)})
+            board = project / "qa" / "layout-board.png"
+            board.write_bytes(png)
+            story = project / "src" / "story.json"
+            write_json(story, {"totalFrames": 30, "scenes": [{"id": "scene-1", "from": 0, "duration": 30}]})
+            manifest = project / "qa" / "layout-review.json"
+            write_json(
+                manifest,
+                {
+                    "schema_version": 1,
+                    "status": "ready",
+                    "story": "src/story.json",
+                    "source_tree": "src",
+                    "source_tree_sha256": tree_sha256(project / "src"),
+                    "frames": frames,
+                    "board": "qa/layout-board.png",
+                    "board_sha256": sha256(board),
+                },
+            )
+            result = subprocess.run(
+                [sys.executable, str(LAYOUT), "--approve-manifest", str(manifest), "--review-receipt", "review-turn-1", "--reviewer", "test"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            value = json.loads(manifest.read_text(encoding="utf-8"))
+            self.assertEqual(value["status"], "passed")
+            self.assertEqual(value["review_receipt"], "review-turn-1")
+
     def test_transition_review_requires_explicit_review_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_name:
             manifest = Path(temp_name) / "transition.json"

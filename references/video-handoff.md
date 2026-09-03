@@ -70,11 +70,24 @@ Remotion 必须在最外层渲染一套全局 timed captions。相邻 scene 的�
 
 场景通常 4–8 秒，每个 beat 只有一个传播任务。读取 `story-schema.md`、`style-grammar.md`、`emotion-motion-curve.md` 和 `opening-and-evidence-motion.md`。frame 0 是封面；1.5 秒内出现任务证据；3 秒内落下第一个工作回报。AceMode 内容声音不自动等于 AceMode 发布者品牌，品牌开启必须单独确认。
 
-先验证 story，再分别生成审片包和逐切点检查：
+先验证 story，再生成原生尺寸布局检查。必须打开 `qa/layout-frames/` 中的原图逐张查看，缩略总览只用于扫视：
 
 ```bash
 python3 <skill-dir>/scripts/validate_story.py \
   <video-dir>/src/story.json <video-dir>/source-ledger.json
+
+python3 <skill-dir>/scripts/build_layout_review.py <video-dir> \
+  --story src/story.json --composition EditorialDocumentary
+
+python3 <skill-dir>/scripts/build_layout_review.py \
+  --approve-manifest <video-dir>/qa/layout-review.json \
+  --review-receipt <current-review-turn-id> \
+  --reviewer <reviewer-name>
+```
+
+布局检查逐 scene 覆盖早段、中点和晚段，并验证 evidence `layoutRequiredLandmarks`、原生设备可读性、字幕安全区和语义对应。任何失败先改布局并重建。布局通过后再分别生成审片包和逐切点检查：
+
+```bash
 
 python3 <skill-dir>/scripts/build_review_package.py <video-dir> \
   --story src/story.json --composition EditorialDocumentary
@@ -111,6 +124,8 @@ python3 <skill-dir>/scripts/newsroom_state.py mark-preview \
   --director-frame <video-dir>/director/style-frame-02.png \
   --director-frame <video-dir>/director/style-frame-03.png \
   --review-manifest <video-dir>/qa/review-package.json \
+  --layout-review <video-dir>/qa/layout-review.json \
+  --layout-board <video-dir>/qa/layout-board.png \
   --transition-review <video-dir>/qa/transition-review.json \
   --transition-board <video-dir>/qa/transition-board.png \
   --story-file <video-dir>/src/story.json \
@@ -124,9 +139,9 @@ python3 <skill-dir>/scripts/newsroom_state.py mark-preview \
   --board <video-dir>/qa/review-board.png
 ```
 
-多画幅时，按同一顺序为每个 profile 重复 review manifest、transition review/board、story、cover、opening 和 board。命令会交叉核对 delivery spec、声音、字幕来源哈希、scene plan、story、review 和 transition manifest，并冻结完整 Remotion `src/` 树与锁定配置。
+多画幅时，按同一顺序为每个 profile 重复 review manifest、layout review/board、transition review/board、story、cover、opening 和 board。命令会交叉核对 delivery spec、声音、字幕来源哈希、scene plan、story、review、layout 和 transition manifest，并冻结完整 Remotion `src/` 树与锁定配置。
 
-向用户展示每个画幅的封面、带声音开场、代表帧板、转场板、实测时长、目标误差和 publication blockers，再用 `present-preview --receipt ...` 记录当前审片包展示，等待独立的完整渲染确认。
+向用户展示每个画幅的封面、带声音开场、布局板、代表帧板、转场板、实测时长、目标误差和 publication blockers，再用 `present-preview --receipt ...` 记录当前审片包展示，等待独立的完整渲染确认。
 
 ## 完整渲染与交付
 
