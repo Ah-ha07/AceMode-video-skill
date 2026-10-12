@@ -41,7 +41,7 @@ VERIFICATION_LABELS = {
     "unverified": "未证实",
 }
 
-TOPIC_WEIGHTS = {
+TOPIC_WEIGHTS_V3 = {
     "productivity_leverage": 0.25,
     "workflow_clarity": 0.20,
     "practicality": 0.15,
@@ -52,6 +52,25 @@ TOPIC_WEIGHTS = {
     "discussion_value": 0.03,
     "emotional_payoff": 0.02,
 }
+
+TOPIC_WEIGHTS_V4 = {
+    "us_workplace_fit": 0.18,
+    "productivity_leverage": 0.20,
+    "workflow_clarity": 0.16,
+    "time_to_value": 0.14,
+    "practicality": 0.11,
+    "audience_resonance": 0.08,
+    "learning_value": 0.05,
+    "visual_evidence": 0.04,
+    "search_demand": 0.02,
+    "novelty": 0.01,
+    "discussion_value": 0.005,
+    "emotional_payoff": 0.005,
+}
+
+# The newest schema is the public default. Historical schemas select their own
+# weights explicitly so saved rankings do not drift when this skill evolves.
+TOPIC_WEIGHTS = TOPIC_WEIGHTS_V4
 
 REQUIRED_V2_TEXT_FIELDS = (
     "audience_cn",
@@ -71,6 +90,28 @@ REQUIRED_V3_TEXT_FIELDS = (
     "readiness_reason_cn",
     "next_action_cn",
 )
+
+REQUIRED_V4_TEXT_FIELDS = (
+    *REQUIRED_V3_TEXT_FIELDS,
+    "work_stack_cn",
+    "us_availability_cn",
+    "adoption_barrier_cn",
+    "learning_goal_cn",
+    "safe_trial_cn",
+    "success_check_cn",
+)
+
+JOB_FAMILIES = {
+    "cross-functional",
+    "manager-leadership",
+    "operations-project",
+    "sales-customer",
+    "marketing-creative",
+    "finance-analytics",
+    "hr-people",
+    "legal-compliance",
+    "technical",
+}
 
 READINESS_LEVELS = {
     "use-now": "现在可用",
@@ -100,7 +141,14 @@ REQUIRED_V3_JUDGMENTS = (
     "authority",
     "evidence_quality",
     "impact",
-    *TOPIC_WEIGHTS,
+    *TOPIC_WEIGHTS_V3,
+)
+
+REQUIRED_V4_JUDGMENTS = (
+    "authority",
+    "evidence_quality",
+    "impact",
+    *TOPIC_WEIGHTS_V4,
 )
 
 
@@ -213,13 +261,34 @@ def topic_judgment(signal: dict[str, Any], key: str) -> float:
     return judgment(signal, "content_potential")
 
 
+def topic_weights_for_schema(schema_version: int) -> dict[str, float]:
+    return TOPIC_WEIGHTS_V4 if schema_version >= 4 else TOPIC_WEIGHTS_V3
+
+
 def topic_gate(
     topic_score: float,
     productivity_leverage: float,
     practicality: float,
     impact: float,
     workflow_clarity: float,
+    *,
+    schema_version: int = 3,
+    us_workplace_fit: float = 50.0,
+    time_to_value: float = 50.0,
 ) -> tuple[bool, str]:
+    if schema_version >= 4:
+        if us_workplace_fit < 65.0:
+            return False, "美国职场适配低于 65"
+        if workflow_clarity < 65.0:
+            return False, "工作流清晰度低于 65"
+        if topic_score >= 62.0:
+            return True, "美国职场适配与工作流清楚，且选题分达到 62"
+        if productivity_leverage >= 85.0 and time_to_value >= 60.0:
+            return True, "生产力杠杆达到 85，且可在较短时间验证"
+        if practicality >= 85.0 and time_to_value >= 70.0:
+            return True, "现在可行动，且有清楚的安全试用路径"
+        return False, "美国职场适配已通过，但可行动性或见效速度未达门槛"
+
     if topic_score >= 60.0:
         return True, "选题分达到 60"
     if productivity_leverage >= 85.0 and workflow_clarity >= 65.0:
@@ -233,9 +302,12 @@ def topic_gate(
 
 def validate_signal(signal: dict[str, Any], schema_version: int) -> None:
     signal_id = signal.get("id", "<unknown>")
-    required_text = (
-        REQUIRED_V3_TEXT_FIELDS if schema_version >= 3 else REQUIRED_V2_TEXT_FIELDS
-    )
+    if schema_version >= 4:
+        required_text = REQUIRED_V4_TEXT_FIELDS
+    elif schema_version >= 3:
+        required_text = REQUIRED_V3_TEXT_FIELDS
+    else:
+        required_text = REQUIRED_V2_TEXT_FIELDS
     missing_text = [
         key for key in required_text if not str(signal.get(key) or "").strip()
     ]
@@ -251,12 +323,21 @@ def validate_signal(signal: dict[str, Any], schema_version: int) -> None:
             + ", ".join(READINESS_LEVELS)
         )
 
+    if schema_version >= 4 and signal.get("job_family") not in JOB_FAMILIES:
+        raise ValueError(
+            f"Signal {signal_id} job_family must be one of: "
+            + ", ".join(sorted(JOB_FAMILIES))
+        )
+
     judgments = signal.get("judgments")
     if not isinstance(judgments, dict):
         raise ValueError(f"Signal {signal_id} must contain a judgments object")
-    required_judgments = (
-        REQUIRED_V3_JUDGMENTS if schema_version >= 3 else REQUIRED_V2_JUDGMENTS
-    )
+    if schema_version >= 4:
+        required_judgments = REQUIRED_V4_JUDGMENTS
+    elif schema_version >= 3:
+        required_judgments = REQUIRED_V3_JUDGMENTS
+    else:
+        required_judgments = REQUIRED_V2_JUDGMENTS
     missing_judgments = [key for key in required_judgments if key not in judgments]
     if missing_judgments:
         raise ValueError(
@@ -276,7 +357,12 @@ def validate_signal(signal: dict[str, Any], schema_version: int) -> None:
             )
 
 
-def score_signal(signal: dict[str, Any], now: datetime, window_hours: int) -> dict[str, Any] | None:
+def score_signal(
+    signal: dict[str, Any],
+    now: datetime,
+    window_hours: int,
+    schema_version: int = 3,
+) -> dict[str, Any] | None:
     occurred = event_time(signal)
     if not occurred:
         raise ValueError(f"Signal {signal.get('id', '<unknown>')} has no usable event time")
@@ -330,12 +416,13 @@ def score_signal(signal: dict[str, Any], now: datetime, window_hours: int) -> di
     impact = judgment(signal, "impact")
     credibility = 0.55 * authority + 0.45 * evidence_quality
 
+    topic_weights = topic_weights_for_schema(schema_version)
     topic_dimensions = {
         key: topic_judgment(signal, key)
-        for key in TOPIC_WEIGHTS
+        for key in topic_weights
     }
     topic_score = sum(
-        TOPIC_WEIGHTS[key] * value
+        topic_weights[key] * value
         for key, value in topic_dimensions.items()
     )
 
@@ -348,11 +435,18 @@ def score_signal(signal: dict[str, Any], now: datetime, window_hours: int) -> di
 
     flags = {str(flag).lower() for flag in signal.get("flags", [])}
     penalty = sum(FLAG_PENALTIES.get(flag, 0.0) for flag in flags)
-    priority = clamp(
-        0.55 * signal_score
-        + 0.45 * topic_score
-        - penalty
-    )
+    if schema_version >= 4:
+        priority = clamp(
+            0.35 * signal_score
+            + 0.65 * topic_score
+            - penalty
+        )
+    else:
+        priority = clamp(
+            0.55 * signal_score
+            + 0.45 * topic_score
+            - penalty
+        )
 
     verification = str(signal.get("verification", "unverified")).lower()
     if verification == "unverified" or "unverified" in flags:
@@ -364,6 +458,9 @@ def score_signal(signal: dict[str, Any], now: datetime, window_hours: int) -> di
         topic_dimensions["practicality"],
         impact,
         topic_dimensions["workflow_clarity"],
+        schema_version=schema_version,
+        us_workplace_fit=topic_dimensions.get("us_workplace_fit", 50.0),
+        time_to_value=topic_dimensions.get("time_to_value", 50.0),
     )
 
     if not gate_passed:
@@ -406,6 +503,7 @@ def score_signal(signal: dict[str, Any], now: datetime, window_hours: int) -> di
     result["readiness_label_cn"] = READINESS_LEVELS.get(
         str(signal.get("readiness") or ""), "未标注"
     )
+    result["freshness_band"] = "breaking-72h" if age_hours <= 72.0 else "this-week"
     return result
 
 
@@ -431,6 +529,32 @@ def diversify(ranked: list[dict[str, Any]], top: int, max_per_entity: int) -> li
 
 
 def markdown_table(payload: dict[str, Any]) -> str:
+    if int(payload.get("schema_version", 1)) >= 4:
+        lines = [
+            "| # | 新鲜度 | 级别 | 美国岗位与任务 | 改变哪一步 | 美国能否用 | 30 分钟怎么试 | 事件 | Priority | 选题分 |",
+            "|---:|---|:---:|---|---|---|---|---|---:|---:|",
+        ]
+        for index, signal in enumerate(payload["signals"], start=1):
+            title = str(signal.get("title", "Untitled")).replace("|", "\\|")
+            sources = signal.get("sources") or []
+            primary = next((source for source in sources if source.get("is_primary")), None)
+            source = primary or (sources[0] if sources else None)
+            if source and source.get("url"):
+                title = f"[{title}]({source['url']})"
+            freshness = "72h 新信号" if signal.get("freshness_band") == "breaking-72h" else "本周回看"
+            audience = str(signal.get("audience_cn") or "未填写").replace("|", "\\|")
+            task = str(signal.get("work_task_cn") or "未填写").replace("|", "\\|")
+            change = str(signal.get("ai_change_cn") or "未填写").replace("|", "\\|")
+            availability = str(signal.get("us_availability_cn") or "未填写").replace("|", "\\|")
+            trial = str(signal.get("safe_trial_cn") or "未填写").replace("|", "\\|")
+            scores = signal["scores"]
+            lines.append(
+                f"| {index} | {freshness} | {signal['tier']} | {audience}：{task} | "
+                f"{change} | {availability} | {trial} | {title} | "
+                f"{scores['priority']:.1f} | {scores['topic_score']:.1f} |"
+            )
+        return "\n".join(lines) + "\n"
+
     lines = [
         "| # | 级别 | 工作场景 | 改变哪一步 | 现在能否用 | 事件 | Priority | 信号分 | 选题分 |",
         "|---:|:---:|---|---|---|---|---:|---:|---:|",
@@ -512,7 +636,7 @@ def main() -> int:
                 raise ValueError("Each signal must be an object")
             if schema_version >= 2:
                 validate_signal(signal, schema_version)
-            result = score_signal(signal, now, window_hours)
+            result = score_signal(signal, now, window_hours, schema_version)
             if result is None:
                 stale += 1
             else:

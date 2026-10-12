@@ -36,8 +36,10 @@ def make_signal(
         "type": "official-release",
         "event_time": event_time,
         "audience_cn": "正在评估 AI 工具的独立开发者",
+        "job_family": "technical",
         "user_need_cn": "判断是否迁移工作流",
         "work_task_cn": "把需求和代码改动整理成可审查的提交",
+        "work_stack_cn": "GitHub、编辑器和公司批准的编码助手",
         "old_workflow_cn": "人工搜索文件、修改代码、运行检查并整理说明",
         "friction_cn": "时间耗在重复搜索和整理，失败后还要重新定位",
         "ai_change_cn": "AI 可以执行部分搜索、修改与检查，并保留过程",
@@ -45,6 +47,11 @@ def make_signal(
         "human_role_cn": "决定目标、审查代码并对合并结果负责",
         "readiness": "try-now",
         "readiness_reason_cn": "现在可以在低风险仓库试用，但仍要人工审查",
+        "us_availability_cn": "美国付费用户可用，企业账号可能需要管理员开启",
+        "adoption_barrier_cn": "代码访问权限、企业策略和人工审查成本",
+        "learning_goal_cn": "学会先定义验收标准，再让 AI 执行并审查差异",
+        "safe_trial_cn": "在非生产仓库选一个有测试的小修复，不自动合并",
+        "success_check_cn": "比较完成时间、测试通过率和人工修改量",
         "next_action_cn": "先选一个有测试的小修复做同任务对比",
         "topic_thesis_cn": "迁移不应只看演示速度",
         "visual_proof_cn": "用同一任务的并排对比证明",
@@ -54,10 +61,13 @@ def make_signal(
             "authority": 90,
             "evidence_quality": 90,
             "impact": 80,
+            "us_workplace_fit": 80,
             "productivity_leverage": 80,
             "workflow_clarity": 80,
+            "time_to_value": 80,
             "practicality": 80,
             "audience_resonance": 80,
+            "learning_value": 80,
             "novelty": 80,
             "visual_evidence": 80,
             "discussion_value": 80,
@@ -93,6 +103,8 @@ def make_signal(
 
 class TopicScoringTests(unittest.TestCase):
     def test_topic_weights_sum_to_one(self) -> None:
+        self.assertAlmostEqual(sum(rank_signals.TOPIC_WEIGHTS_V3.values()), 1.0)
+        self.assertAlmostEqual(sum(rank_signals.TOPIC_WEIGHTS_V4.values()), 1.0)
         self.assertAlmostEqual(sum(rank_signals.TOPIC_WEIGHTS.values()), 1.0)
 
     def test_topic_dimensions_have_deterministic_weights(self) -> None:
@@ -100,19 +112,24 @@ class TopicScoringTests(unittest.TestCase):
             "authority": 90,
             "evidence_quality": 90,
             "impact": 80,
-            "productivity_leverage": 100,
+            "us_workplace_fit": 100,
+            "productivity_leverage": 0,
             "workflow_clarity": 0,
+            "time_to_value": 0,
             "practicality": 0,
             "audience_resonance": 0,
+            "learning_value": 0,
             "novelty": 0,
             "visual_evidence": 0,
             "discussion_value": 0,
             "search_demand": 0,
             "emotional_payoff": 0,
         }
-        scored = rank_signals.score_signal(make_signal(judgments=judgments), NOW, 72)
+        scored = rank_signals.score_signal(
+            make_signal(judgments=judgments), NOW, 72, schema_version=4
+        )
         assert scored
-        self.assertEqual(scored["scores"]["topic_score"], 25.0)
+        self.assertEqual(scored["scores"]["topic_score"], 18.0)
 
     def test_better_topic_fit_raises_priority_without_changing_signal_score(self) -> None:
         high = make_signal("high")
@@ -121,8 +138,8 @@ class TopicScoringTests(unittest.TestCase):
             low_judgments[key] = 20
         low = make_signal("low", judgments=low_judgments)
 
-        high_score = rank_signals.score_signal(high, NOW, 72)
-        low_score = rank_signals.score_signal(low, NOW, 72)
+        high_score = rank_signals.score_signal(high, NOW, 72, schema_version=4)
+        low_score = rank_signals.score_signal(low, NOW, 72, schema_version=4)
         assert high_score and low_score
         self.assertEqual(
             high_score["scores"]["signal_score"],
@@ -139,6 +156,33 @@ class TopicScoringTests(unittest.TestCase):
         self.assertEqual(rank_signals.topic_gate(59, 50, 85, 89, 65)[0], True)
         self.assertEqual(rank_signals.topic_gate(59, 50, 50, 90, 70)[0], True)
         self.assertEqual(rank_signals.topic_gate(59, 95, 95, 95, 40)[0], False)
+
+    def test_v4_gate_rejects_hot_industry_news_without_worker_fit(self) -> None:
+        passed, reason = rank_signals.topic_gate(
+            80,
+            90,
+            90,
+            100,
+            90,
+            schema_version=4,
+            us_workplace_fit=30,
+            time_to_value=90,
+        )
+        self.assertFalse(passed)
+        self.assertIn("美国职场适配", reason)
+
+    def test_v4_gate_accepts_clear_safe_worker_trial(self) -> None:
+        passed, _ = rank_signals.topic_gate(
+            70,
+            86,
+            80,
+            75,
+            88,
+            schema_version=4,
+            us_workplace_fit=90,
+            time_to_value=82,
+        )
+        self.assertTrue(passed)
 
     def test_v1_content_potential_remains_compatible(self) -> None:
         legacy = make_signal(
@@ -165,10 +209,10 @@ class TopicScoringTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
-    def test_v3_cli_rejects_missing_productivity_fields(self) -> None:
+    def test_v4_cli_rejects_missing_workplace_fields(self) -> None:
         incomplete = make_signal("incomplete")
-        incomplete.pop("new_workflow_cn")
-        payload = {"schema_version": 3, "window_hours": 72, "signals": [incomplete]}
+        incomplete.pop("safe_trial_cn")
+        payload = {"schema_version": 4, "window_hours": 72, "signals": [incomplete]}
 
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = Path(temp_dir) / "candidates.json"
@@ -181,12 +225,12 @@ class CliTests(unittest.TestCase):
             )
 
         self.assertEqual(completed.returncode, 2)
-        self.assertIn("new_workflow_cn", completed.stderr)
+        self.assertIn("safe_trial_cn", completed.stderr)
 
     def test_v3_cli_rejects_invalid_readiness(self) -> None:
         invalid = make_signal("invalid-readiness")
         invalid["readiness"] = "available-soon"
-        payload = {"schema_version": 3, "window_hours": 72, "signals": [invalid]}
+        payload = {"schema_version": 4, "window_hours": 72, "signals": [invalid]}
 
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = Path(temp_dir) / "candidates.json"
@@ -203,12 +247,12 @@ class CliTests(unittest.TestCase):
 
     def test_cli_separates_main_list_watchlist_and_stale_events(self) -> None:
         low_topic = make_signal("low-topic")
-        low_topic["judgments"].update({key: 20 for key in rank_signals.TOPIC_WEIGHTS})
+        low_topic["judgments"].update({key: 20 for key in rank_signals.TOPIC_WEIGHTS_V4})
         low_topic["judgments"]["impact"] = 89
 
         stale = make_signal("stale", event_time="2026-08-01T10:00:00Z")
         payload = {
-            "schema_version": 3,
+            "schema_version": 4,
             "window_hours": 72,
             "signals": [make_signal("main"), low_topic, stale],
         }
@@ -232,10 +276,18 @@ class CliTests(unittest.TestCase):
             )
 
         output = json.loads(completed.stdout)
-        self.assertEqual(output["schema_version"], 3)
+        self.assertEqual(output["schema_version"], 4)
         self.assertEqual(output["stale_excluded"], 1)
         self.assertEqual([item["id"] for item in output["signals"]], ["main"])
         self.assertIn("low-topic", [item["id"] for item in output["watchlist"]])
+
+    def test_168_hour_window_marks_weekly_backfill(self) -> None:
+        weekly = make_signal("weekly", event_time="2026-08-02T10:00:00Z")
+        scored = rank_signals.score_signal(
+            weekly, NOW, 168, schema_version=4
+        )
+        assert scored
+        self.assertEqual(scored["freshness_band"], "this-week")
 
 
 if __name__ == "__main__":

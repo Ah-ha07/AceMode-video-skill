@@ -1,11 +1,13 @@
 ---
 name: acemode-newsroom
-description: 把过去72小时的AI与科技热点翻译成普通人能理解、能判断、能行动的生产力内容，再完成固定序号选题、AceMode口播稿、事实账本、用户定稿、证据型视频预览和最终成片。用于用户询问今天或最近的AI热点、想知道新闻会改变哪种日常工作、要求写榜单中的第几个稿件、修改或确认文案、把已确认新闻做成短视频，或继续一个跨轮次新闻内容项目时。
+description: 把最新 AI 信号筛成面向美国在职人员的可执行生产力内容，再完成固定序号选题、AceMode 英文口播稿、事实账本、用户定稿、证据型视频预览和最终成片。用于查询近期 AI 工作效率热点、了解会议/邮件/文档/数据/项目/客户等工作如何被 AI 改变、学习可安全试用的职场 AI 工作流，或继续一个跨轮次新闻视频项目；不用于单纯追逐融资、模型榜单或与工作无关的行业新闻。
 ---
 
 # AceMode Newsroom
 
-把热点发现、稿件和视频当成同一个有状态的编辑项目。AceMode 的使命是帮助大多数人把 AI 和其他新工具变成显著的生产力，而不是围观一串模型名、参数和产品更新。新闻是证据，工作流变化才是主角：先回答它影响谁的哪项任务、原来怎么做、现在能怎么做、人的责任是什么、现在能用还是仍属趋势，再解释背后的新闻与技术。
+把热点发现、稿件和视频当成同一个有状态的编辑项目。AceMode 的默认核心受众是在美国工作的知识型员工和一线业务人员，而不是 AI 圈内人。使命是帮助他们学会 AI、判断 AI，并在不绕过公司政策的前提下把 AI 变成真正的工作效率：减少低价值搬运、查找、重复沟通和返工，把时间还给判断、关系、创造和更早下班。
+
+新闻是证据，工作流变化才是主角。先回答它影响美国哪类员工的哪项任务、进入什么现有办公栈、原来怎么做、现在能怎么做、美国是否可用、公司的权限与数据边界是什么、30 分钟能怎样安全试验、怎样判断它真的有效，再解释背后的新闻与技术。融资、估值、模型榜单、基础设施和宏观安全新闻若没有形成可验证的员工工作变化，只能进入观察名单。
 
 最终成片必须对应用户选中的那条新闻、已确认的那版稿件和可追溯的证据。不能把与普通人无关的行业信号强行包装成当下可用；这类内容应明确标成观察或长期趋势。
 
@@ -43,12 +45,12 @@ python3 <skill-dir>/scripts/newsroom_state.py init \
 
 ## 第一站：热点雷达
 
-这是实时信息任务，必须联网核验。用英文搜索，中文输出。读取 [source-map.md](references/source-map.md)、[scoring.md](references/scoring.md)、[output-contract.md](references/output-contract.md) 和 [productivity-story.md](references/productivity-story.md)。
+这是实时信息任务，必须联网核验。用英文搜索，中文输出。读取 [us-workplace-lens.md](references/us-workplace-lens.md)、[source-map.md](references/source-map.md)、[scoring.md](references/scoring.md)、[output-contract.md](references/output-contract.md) 和 [productivity-story.md](references/productivity-story.md)。
 
-1. 固定准确的 72 小时窗口，记录当前时间、时区、起止时间和数据限制。
+1. 先固定准确的 72 小时窗口，记录当前时间、时区、起止时间和数据限制。若通过美国职场选题门的候选少于 5 条，再扩展到 168 小时实用回看；保留真实日期并明确标记为本周回看，不能用新报道给旧事件续命。
 2. 默认主榜 10 条时，先建立至少 25 个去重事件簇；用户要 N 条时，候选池目标为 `min(50, max(12, 2N+5))`。
 3. 同时扫描官方发布、创始人/研究者原帖、GitHub、Hacker News、Reddit、可信媒体/论文、令人印象深刻的独立作品，以及能说明用户需求的讨论。搜索摘要只用于发现线索。
-4. 为每个候选写清受众与任务、旧工作流、真正卡点、AI 改变的节点、新工作流、人的责任、可用程度及下一步，再写选题主张和视觉证据。新候选使用 `schema_version: 3`。将事实热度与生产力内容价值分开打分；不可见的互动数省略，不能猜。
+4. 为每个候选写清美国岗位与任务、现有工作栈、旧工作流、真正卡点、AI 改变的节点、新工作流、人的责任、美国可用条件、采用阻力、学习目标、30 分钟安全试验及成功判断，再写选题主张和视觉证据。新候选使用 `schema_version: 4`。将事实热度与美国职场内容价值分开打分；不可见的互动数省略，不能猜。
 5. 聚合同一事件的多条来源后保存 `radar/candidates.json`，运行确定性排序器：
 
 ```bash
@@ -67,7 +69,7 @@ python3 <skill-dir>/scripts/newsroom_state.py import-radar \
   --brief <project-dir>/radar/brief.md
 ```
 
-对话里必须先回答今天哪些工作正在发生什么变化，再展示完整编号主榜、今日三选，以及 `brief.md`、`signals.json` 和 `project.json` 的可点击路径。不要先用公司名和模型名占满总表，也不要只说文件已经生成。
+对话里必须先回答这周哪些美国职场任务正在发生什么变化，再展示完整编号主榜、今日三选，以及 `brief.md`、`signals.json` 和 `project.json` 的可点击路径。主榜要区分 72 小时新信号与 7 天实用回看。不要先用公司名和模型名占满总表，也不要只说文件已经生成。
 
 ## 第二站：按固定序号写稿
 
@@ -79,10 +81,11 @@ python3 <skill-dir>/scripts/newsroom_state.py select <project-dir> 1 2
 
 每条 story 读取自己的 `selected-signal.json`。不要为了理解第几个而重跑雷达。写稿前打开主要来源；必要时补充一手来源，并把新增来源标记为非雷达来源。
 
-读取 [writer-persona.md](references/writer-persona.md)、[productivity-story.md](references/productivity-story.md) 和 [script-package-contract.md](references/script-package-contract.md)。围绕一个可验证的工作流变化生成 v2 `script-package.json` 和 `claim-ledger.json`，做到：
+读取 [writer-persona.md](references/writer-persona.md)、[us-workplace-lens.md](references/us-workplace-lens.md)、[productivity-story.md](references/productivity-story.md) 和 [script-package-contract.md](references/script-package-contract.md)。围绕一个可验证的美国职场工作流变化生成 v2 `script-package.json` 和 `claim-ledger.json`，做到：
 
 - 开头三秒从具体工作场景、旧痛点或结果变化切入；公司、模型和参数在观众知道为什么与自己有关之后再出现。
 - 同一个任务要交代旧流程、AI 改变哪一步、新的人机分工、人的最终责任、可用程度和最小下一步。
+- 明确美国用户的套餐、管理员开关、地区和公司数据政策边界；建议的第一次试用必须可撤销、使用非敏感资料，并默认不自动发送或写入生产系统。
 - 事实、数字、引语、社区观察和编辑推断都有 claim 引用及边界。
 - 没有同任务实测时，不承诺节省多少时间、提升几倍或替代多少人。
 - 口播不含任何画面或剪辑指令。

@@ -16,6 +16,7 @@
 - 每次运行重新确认人物职位、账号归属和产品状态；名单只是种子，不是事实数据库。
 - 把“谁先说”与“谁转述得最热”分开记录。
 - 把“这条信号有多热”与“它解决了谁的什么问题”分开搜索；热度数字不能代替用户需求证据。
+- 默认从美国员工的工作任务出发，再反查产品新闻。若一条事件只在 AI 圈内热，但无法进入美国常见办公栈，不得因互动高而优先。
 
 ## 一手来源
 
@@ -24,6 +25,7 @@
 - OpenAI、Anthropic、Google DeepMind、Google AI、xAI、Meta AI、Microsoft AI、GitHub、Mistral、Hugging Face、Kimi/Moonshot、DeepSeek 的官方博客、release notes、model cards 和开发者文档。
 - Claude Code、Codex、Cursor、GitHub Copilot、Cognition/Devin、Windsurf、Replit、Vercel、Lovable、Bolt 等编码与创作工具的 changelog、GitHub release、status page 和官方账号。
 - arXiv、论文项目页、作者 GitHub、模型仓库与 benchmark 原始榜单。
+- Microsoft 365、Google Workspace、Slack/Salesforce、Zoom/Webex、Adobe/Acrobat、Notion、Asana、Monday、Atlassian、HubSpot、Zapier 和主流行业 SaaS 的 release notes、管理员文档、定价与可用性页面。
 
 优先级：
 
@@ -58,6 +60,7 @@ Reddit 优先扫描：
 - r/cursor
 - r/LocalLLM
 - 与当天产品或模型直接相关的活跃社区
+- r/productivity、r/Microsoft365、r/excel、r/GoogleWorkspace、r/slack、r/projectmanagement、r/sales、r/marketing、r/humanresources、r/accounting 等能看到真实工作阻力的社区
 
 同时扫描 Hacker News、GitHub Trending、GitHub issues/discussions，以及原作者的演示页。社区热度只能证明讨论强度，不能单独证明技术结论。
 
@@ -136,6 +139,26 @@ site:news.ycombinator.com <PRODUCT> (workflow OR pricing OR migration)
 <PRODUCT> rising searches OR trends
 ```
 
+### G. 美国工作任务与采用条件
+
+不要只查产品有没有功能，同时查询它是否进入美国员工的现有工作日、能否安全试用，以及公司管理员是否必须先开放：
+
+```text
+AI meeting follow-up workflow US employees new feature <START_DATE> <END_DATE>
+AI weekly status report workflow Microsoft 365 OR Google Workspace
+AI spreadsheet analysis office workers release notes
+AI sales call follow-up CRM workflow new feature
+AI customer support handoff human review workflow
+AI project update Slack Teams Asana workflow
+<PRODUCT> US availability pricing admin controls enterprise privacy
+<PRODUCT> data retention training customer data permissions
+<PRODUCT> rollout Business Enterprise plan admin enable
+site:reddit.com <PRODUCT> (work OR office OR manager) (actually use OR workflow OR policy)
+site:news.ycombinator.com <PRODUCT> (enterprise OR workflow OR permissions OR review)
+```
+
+优先寻找五类证据：一手可用性页面、管理员/数据政策文档、同任务界面演示、独立用户复现、受众反复提出的工作问题。供应商客户案例可证明案例存在，但其节省时间倍数必须明确归因，不能当成普遍结果。
+
 将意图分为四类，每个候选至少匹配一类：
 
 - `learn`：想理解新能力、原理或限制。
@@ -147,15 +170,19 @@ site:news.ycombinator.com <PRODUCT> (workflow OR pricing OR migration)
 
 对拟进入主榜的候选，再补足同一任务的旧步骤、新步骤、人工检查点和实际可用条件。官方功能页可以证明能力与开放范围；用户案例或独立复现才能更好地支持流程收益。若只有功能描述，没有工作流证据，降低 `workflow_clarity` 与 `productivity_leverage`，不要靠想象补齐。
 
+还要补足 `work_stack_cn`、`us_availability_cn`、`adoption_barrier_cn`、`learning_goal_cn`、`safe_trial_cn` 和 `success_check_cn`。缺少套餐、管理员开关或美国可用信息时，`us_workplace_fit` 不得高于 64；无法设计合规、可撤销的小试时，`time_to_value` 不得高于 59。
+
 ## 覆盖检查
 
 默认输出 10 条时，在结束发现阶段前确认：
 
 - 至少扫描 5 个一手产品/实验室来源。
+- 至少扫描 6 个美国常见办公/业务产品来源，其中至少 3 个不是开发者工具。
 - 至少扫描 8 个具名人物或核心团队账号。
 - 至少扫描 4 个 subreddit 或社区入口。
 - 至少寻找 5 个带可视产物的作品候选。
 - 至少对 10 个高潜候选做受众意图补搜，记录可见的重复提问、趋势、旧/新步骤和人工检查证据。
+- 至少覆盖会议沟通、写作检索、数据分析、项目运营、客户工作、内容创意、专业技术七类任务中的五类。
 - 候选池至少 25 个事件簇，且不把同一事件的多篇转述重复计数。
 
-用户只要 1–5 条时使用紧凑覆盖：至少扫描 3 个一手产品/实验室来源、4 个具名人物或团队账号、2 个社区入口、3 个可视作品候选，并对至少 5 个高潜候选做受众意图补搜。候选池仍按 `min(50, max(12, 2N + 5))` 计算，不降低时间与核验门槛。
+用户只要 1–5 条时使用紧凑覆盖：至少扫描 3 个一手产品/实验室来源、4 个美国常见办公/业务产品来源、4 个具名人物或团队账号、2 个社区入口、3 个可视作品候选，并对至少 5 个高潜候选做受众意图补搜。候选池仍按 `min(50, max(12, 2N + 5))` 计算，不降低时间与核验门槛。

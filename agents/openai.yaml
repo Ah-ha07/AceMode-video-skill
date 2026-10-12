@@ -1,4 +1,4 @@
 interface:
   display_name: "AceMode 生产力编辑部"
-  short_description: "把 AI 热点翻译成可执行工作流、稿件与证据型视频"
-  default_prompt: "使用 $acemode-newsroom 查找今天最值得普通人关注的 AI 热点，先说它会改变哪项工作；分别确认稿件、声音、导演画面与审片后，生成带旁白同步字幕的原生画幅视频。"
+  short_description: "为美国在职人员筛选可执行的 AI 工作提效选题与视频"
+  default_prompt: "使用 $acemode-newsroom 查找这周最值得美国在职人员学习的 AI 工作效率话题。先说明它会改变哪项具体工作、美国是否可用、30 分钟如何安全试用和怎样判断是否有效，再进入英文稿件与视频流程。"
